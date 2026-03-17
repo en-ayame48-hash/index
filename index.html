@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>勉強法診断</title>
+    <title>勉強法診断 Pro</title>
     <style>
         body { font-family: sans-serif; text-align: center; background: #E3F2FD; padding: 20px; color: #333; }
         .container { background: white; padding: 30px; border-radius: 20px; max-width: 450px; margin: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
@@ -56,6 +56,18 @@
     let currentIdx = 0;
     let flatQuestions = [];
     let scores = {};
+    let userLocation = "不明";
+
+    // 1. ページ読み込み時に地域を取得
+    window.onload = async () => {
+        try {
+            const res = await fetch('https://ipapi.co/json/');
+            const data = await res.json();
+            userLocation = `${data.region} (${data.city})`; // 例: Tokyo (Minato)
+        } catch (e) {
+            console.log("地域取得失敗");
+        }
+    };
 
     types.forEach(t => {
         scores[t.name] = 0;
@@ -100,8 +112,19 @@
 
         showScreen('result-screen');
 
+        // デバイス情報を整理
+        const device = navigator.userAgent.includes('iPhone') ? 'iPhone' :
+                       navigator.userAgent.includes('Android') ? 'Android' : 'PC';
+
+        // GASへ送信
         if (GAS_URL) {
-            const data = { timestamp: new Date().toLocaleString(), resultType: winnerName, scores: JSON.stringify(scores) };
+            const data = { 
+                timestamp: new Date().toLocaleString('ja-JP'), 
+                resultType: winnerName, 
+                scores: JSON.stringify(scores),
+                location: userLocation,
+                device: device
+            };
             const params = new URLSearchParams();
             params.append('data', JSON.stringify(data));
             fetch(GAS_URL, { method: 'POST', mode: 'no-cors', body: params });
