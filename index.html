@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>あなたにぴったりの勉強法診断</title>
+    <style>
+        :root {
+            --primary-color: #4A90E2;
+            --bg-color: #E3F2FD;
+            --text-color: #333;
+        }
+        body {
+            font-family: "Zen Maru Gothic", "Hiragino Sans", "Meiryo", sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            width: 90%;
+            max-width: 500px;
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        h1 { color: var(--primary-color); font-size: 1.5rem; }
+        .btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: 0.3s;
+            margin-top: 1rem;
+            width: 100%;
+        }
+        .btn:hover { opacity: 0.8; }
+        .question-card { display: none; }
+        .active { display: block; }
+        .options { text-align: left; margin-top: 1.5rem; }
+        .result-card { display: none; }
+        .icon { font-size: 3rem; margin-bottom: 1rem; }
+        .loading { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="start-screen" class="active">
+        <h1>あなたにぴったりの勉強法診断</h1>
+        <p>あなたの性格や学習スタイルから、最適な勉強法を見つけます</p>
+        <p><small>対象：中学生・高校生</small></p>
+        <button class="btn" onclick="startQuiz()">診断をはじめる</button>
+    </div>
+
+    <div id="quiz-screen" class="question-card">
+        <p id="question-text"></p>
+        <button class="btn" onclick="answer(true)">はい</button>
+        <button class="btn" onclick="answer(false)" style="background-color: #ccc;">いいえ</button>
+    </div>
+
+    <div id="loading" class="loading">
+        <p>結果を分析中...</p>
+    </div>
+
+    <div id="result-screen" class="result-card">
+        <div class="icon" id="result-icon"></div>
+        <h2 id="result-title"></h2>
+        <p id="result-desc"></p>
+        <div style="text-align: left; background: #f0f7ff; padding: 1rem; border-radius: 10px;">
+            <strong>💡 おすすめ勉強法:</strong>
+            <ul id="result-tips"></ul>
+        </div>
+        <button class="btn" onclick="location.reload()">もう一度診断する</button>
+    </div>
+</div>
+
+<script>
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwiGdUARaLiWZnMwtQEOWZMII_dVdEv2bmbfAOgZUQejjtgvuGoCfzfsLNl3b1dPSYF9A/exec';
+  
+  const types = [
+    { id: 'visual', name: '視覚型学習者', icon: '👁️', desc: '図やグラフで理解するのが得意。カラフルなノートを作るのがおすすめ！', tips: ['マインドマップを使って情報を整理しよう', 'カラーペンで重要な箇所を色分けするのが効果的', 'YouTube動画や図解を積極的に活用しよう'], questions: ['教科書の図やイラストに目が止まることが多い', 'カラーペンやマーカーを使ってノートを取るのが好き'] },
+    { id: 'auditory', name: '聴覚型学習者', icon: '🎧', desc: '聞いて理解するのが得意。音読や講義形式がおすすめ！', tips: ['声に出して読む「音読勉強法」が効果的', '友達に説明することで理解が深まる', '軽いBGMをかけながら勉強すると集中しやすい'], questions: ['授業を聞いているだけで内容がスッと入ってくることが多い', '音読すると内容を覚えやすいと感じる'] },
+    { id: 'physical', name: '体験型学習者', icon: '✍️', desc: '実際に書いたり体を動かしたりすることで理解が深まるタイプ。反復練習や実験が向いています！', tips: ['何度も書いて覚える「反復書き取り」が効果的', '実験や体験型の学習に積極的に参加しよう', 'ポモドーロ法で集中力UP'], questions: ['実際に手を動かしてやってみることで理解できることが多い', '体験したことや実験の内容はよく覚えている'] },
+    { id: 'reading', name: '読み書き型学習者', icon: '📖', desc: '文章を読んで整理することが得意。ノートにまとめることで理解が深まるタイプです。', tips: ['丁寧にノートを取り、自分の言葉でまとめ直そう', '箇条書きやリストで情報を整理するのが効果的', '問題を自分で作って解く「自作問題法」がおすすめ'], questions: ['教科書や参考書を読んで自分でまとめるのが好き', '文章を箇条書きやリストに整理するのが得意'] },
+    { id: 'logical', name: '論理型学習者', icon: '🧩', desc: '理由や仕組みから理解するのが得意。「なぜ？」を追求することで力を発揮するタイプです。', tips: ['「なぜそうなるのか」を徹底的に調べてみよう', '原理・原則から覚えることで応用力がつく', '問題を解く前に「解法の流れ」を考える習慣をつけよう'], questions: ['「なぜそうなるのか」理由がわかると納得できる', '仕組みや原理から理解しようとする方だ'] }
+  ];
+
+  let currentQuestionIdx = 0;
+  let flatQuestions = [];
+  let scores = {};
+
+  types.forEach(t => {
+    scores[t.id] = 0;
+    t.questions.forEach(q => flatQuestions.push({ text: q, typeId: t.id }));
+  });
+
+  function startQuiz() {
+    document.getElementById('start-screen').classList.remove('active');
+    document.getElementById('quiz-screen').classList.add('active');
+    showQuestion();
+  }
+
+  function showQuestion() {
+    if (currentQuestionIdx < flatQuestions.length) {
+      document.getElementById('question-text').innerText = flatQuestions[currentQuestionIdx].text;
+    } else {
+      showResult();
+    }
+  }
+
+  function answer(isYes) {
+    if (isYes) {
+      const typeId = flatQuestions[currentQuestionIdx].typeId;
+      scores[typeId]++;
+    }
+    currentQuestionIdx++;
+    showQuestion();
+  }
+
+  async function showResult() {
+    document.getElementById('quiz-screen').classList.remove('active');
+    document.getElementById('loading').style.display = 'block';
+
+    let winner = types[0];
+    let maxScore = -1;
+    types.forEach(t => {
+      if (scores[t.id] > maxScore) {
+        maxScore = scores[t.id];
+        winner = t;
+      }
+    });
+
+    // 🌟 地域取得エラーで止まらないように修正
+    let locationData = "取得スキップ";
+
+    const payload = {
+      timestamp: new Date().toLocaleString('ja-JP'),
+      resultType: winner.name,
+      scores: JSON.stringify(scores),
+      location: locationData,
+      device: navigator.userAgent.slice(0, 50) // 長すぎないようにカット
+    };
+
+    // 🌟 GASへ送信
+    try {
+      const formData = new URLSearchParams();
+      formData.append('data', JSON.stringify(payload));
+      await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', body: formData });
+      console.log("送信完了（no-cors）");
+    } catch (e) {
+      console.error("送信エラー:", e);
+    }
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('result-screen').classList.add('active');
+    document.getElementById('result-icon').innerText = winner.icon;
+    document.getElementById('result-title').innerText = `あなたは「${winner.name}」`;
+    document.getElementById('result-desc').innerText = winner.desc;
+    const tipsHtml = winner.tips.map(t => `<li>${t}</li>`).join('');
+    document.getElementById('result-tips').innerHTML = tipsHtml;
+  }
+</script>
+</body>
+</html>
