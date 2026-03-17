@@ -1,21 +1,65 @@
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbwiGdUARaLiWZnMwtQEOWZMII_dVdEv2bmbfAOgZUQejjtgvuGoCfzfsLNl3b1dPSYF9A/exec';
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>勉強法診断</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; background: #E3F2FD; padding: 20px; color: #333; }
+        .container { background: white; padding: 30px; border-radius: 20px; max-width: 450px; margin: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .screen { display: none; }
+        .active { display: block; }
+        .btn { background: #4A90E2; color: white; border: none; padding: 15px; width: 100%; border-radius: 30px; margin-top: 15px; cursor: pointer; font-size: 18px; transition: 0.3s; }
+        .btn:hover { opacity: 0.8; }
+        h1 { color: #4A90E2; }
+        ul { text-align: left; padding-left: 20px; line-height: 1.6; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="start-screen" class="screen active">
+        <h1>勉強法診断</h1>
+        <p>あなたにぴったりの学習スタイルを見つけます</p>
+        <button class="btn" onclick="startQuiz()">診断をはじめる</button>
+    </div>
+
+    <div id="quiz-screen" class="screen">
+        <p id="question-text" style="font-size: 1.2rem; font-weight: bold; min-height: 3rem; display: flex; align-items: center; justify-content: center;"></p>
+        <button class="btn" onclick="answer(true)">はい</button>
+        <button class="btn" onclick="answer(false)" style="background:#ccc;">いいえ</button>
+    </div>
+
+    <div id="result-screen" class="screen">
+        <h2>診断結果</h2>
+        <h1 id="result-title" style="color:#4A90E2;"></h1>
+        <p id="result-desc" style="margin-bottom: 20px;"></p>
+        <div style="text-align: left; background: #f0f7ff; padding: 15px; border-radius: 10px;">
+            <strong>💡 アドバイス:</strong>
+            <ul id="result-tips"></ul>
+        </div>
+        <button class="btn" onclick="location.reload()" style="background:#666;">最初からやり直す</button>
+    </div>
+</div>
+
+<script>
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbwiGdUARaLiWZnMwtQEOWZMII_dVdEv2bmbfAOgZUQejjtgvuGoCfzfsLNl3b1dPSYF9A/exec';
 
     const types = [
-        { id: 'visual', name: '視覚型学習者', icon: '👁️', desc: '図やグラフで理解するのが得意。カラフルなノートを作るのがおすすめ！', tips: ['マインドマップを使って情報を整理しよう', 'カラーペンで重要な箇所を色分けするのが効果的', 'YouTube動画や図解を積極的に活用しよう'], questions: ['教科書の図やイラストに目が止まることが多い', 'カラーペンやマーカーを使ってノートを取るのが好き'] },
-        { id: 'auditory', name: '聴覚型学習者', icon: '🎧', desc: '聞いて理解するのが得意。音読や講義形式がおすすめ！', tips: ['声に出して読む「音読勉強法」が効果的', '友達に説明することで理解が深まる', '軽いBGMをかけながら勉強すると集中しやすい'], questions: ['授業を聞いているだけで内容がスッと入ってくることが多い', '音読すると内容を覚えやすいと感じる'] },
-        { id: 'physical', name: '体験型学習者', icon: '✍️', desc: '実際に書いたり体を動かしたりすることで理解が深まるタイプ。反復練習や実験が向いています！', tips: ['何度も書いて覚える「反復書き取り」が効果的', '実験や体験型の学習に積極的に参加しよう', 'ポモドーロ法で集中力UP'], questions: ['実際に手を動かしてやってみることで理解できることが多い', '体験したことや実験の内容はよく覚えている'] },
-        { id: 'reading', name: '読み書き型学習者', icon: '📖', desc: '文章を読んで整理することが得意。ノートにまとめることで理解が深まるタイプです。', tips: ['丁寧にノートを取り、自分の言葉でまとめ直そう', '箇条書きやリストで情報を整理するのが効果的', '問題を自分で作って解く「自作問題法」がおすすめ'], questions: ['教科書や参考書を読んで自分でまとめるのが好き', '文章を箇条書きやリストに整理するのが得意'] },
-        { id: 'logical', name: '論理型学習者', icon: '🧩', desc: '理由や仕組みから理解するのが得意。「なぜ？」を追求することで力を発揮するタイプです。', tips: ['「なぜそうなるのか」を徹底的に調べてみよう', '原理・原則から覚えることで応用力がつく', '問題を解く前に「解法の流れ」を考える習慣をつけよう'], questions: ['「なぜそうなるのか」理由がわかると納得できる', '仕組みや原理から理解しようとする方だ'] }
+        { name: '視覚型学習者', icon: '👁️', desc: '図やグラフで理解するのが得意なタイプです！', tips: ['カラーペンを活用する', 'マインドマップを書く', '動画解説を見る'], questions: ['教科書の図やイラストが気になる', '色分けしてノートを書くのが好き'] },
+        { name: '聴覚型学習者', icon: '🎧', desc: '耳から入る情報に強いタイプです！', tips: ['音読して覚える', '友達に勉強内容を教える', '静かすぎるより少し音がある方が集中できる'], questions: ['授業を聞くだけで理解できる方だ', '声に出すと覚えやすいと感じる'] },
+        { name: '体験型学習者', icon: '✍️', desc: '体を動かしたり書いたりして覚えるタイプです！', tips: ['とにかく手を動かして書く', 'ポモドーロ法で短く集中する', '実験や工作が好き'], questions: ['実際にやってみないと納得できない', 'じっとしているより動く方が好き'] },
+        { name: '読み書き型', icon: '📖', desc: '文章を整理して覚えるのが得意なタイプです！', tips: ['大事なところを書き出す', '自分だけのまとめノートを作る', '単語帳を活用する'], questions: ['文章を読んだり書いたりするのが好き', '箇条書きでまとめるのが得意'] },
+        { name: '論理型学習者', icon: '🧩', desc: '理由や仕組みを知るのが得意なタイプです！', tips: ['「なぜ」を追求する', '解き方のパターンを分析する', '計画を立てて進める'], questions: ['理由がわかるとスッキリする', '数学の証明やパズルが好き'] }
     ];
 
-    let currentQuestionIdx = 0;
+    let currentIdx = 0;
     let flatQuestions = [];
     let scores = {};
 
-    // 質問をリスト化
     types.forEach(t => {
-        scores[t.id] = 0;
-        t.questions.forEach(q => flatQuestions.push({ text: q, typeId: t.id }));
+        scores[t.name] = 0;
+        t.questions.forEach(q => flatQuestions.push({ text: q, typeName: t.name }));
     });
 
     function startQuiz() {
@@ -24,16 +68,15 @@ const GAS_URL = 'https://script.google.com/macros/s/AKfycbwiGdUARaLiWZnMwtQEOWZM
     }
 
     function showQuestion() {
-        document.getElementById('question-text').innerText = flatQuestions[currentQuestionIdx].text;
+        document.getElementById('question-text').innerText = flatQuestions[currentIdx].text;
     }
 
     function answer(isYes) {
         if (isYes) {
-            const typeId = flatQuestions[currentQuestionIdx].typeId;
-            scores[typeId]++;
+            scores[flatQuestions[currentIdx].typeName]++;
         }
-        currentQuestionIdx++;
-        if (currentQuestionIdx < flatQuestions.length) {
+        currentIdx++;
+        if (currentIdx < flatQuestions.length) {
             showQuestion();
         } else {
             showResult();
@@ -41,37 +84,35 @@ const GAS_URL = 'https://script.google.com/macros/s/AKfycbwiGdUARaLiWZnMwtQEOWZM
     }
 
     function showResult() {
-        // 先に結果を計算して表示
-        let winner = types[0];
-        let maxScore = -1;
-        types.forEach(t => {
-            if (scores[t.id] > maxScore) {
-                maxScore = scores[t.id];
-                winner = t;
-            }
+        let winnerName = Object.keys(scores).reduce((a, b) => scores[a] > scores[b] ? a : b);
+        let winnerData = types.find(t => t.name === winnerName);
+
+        document.getElementById('result-title').innerText = winnerData.icon + winnerData.name;
+        document.getElementById('result-desc').innerText = winnerData.desc;
+        
+        const tipsList = document.getElementById('result-tips');
+        tipsList.innerHTML = '';
+        winnerData.tips.forEach(tip => {
+            const li = document.createElement('li');
+            li.innerText = tip;
+            tipsList.appendChild(li);
         });
 
-        document.getElementById('result-title').innerText = "あなたは「" + winner.name + "」";
-        document.getElementById('result-desc').innerText = winner.desc;
         showScreen('result-screen');
 
-        // 裏でGASに送信
         if (GAS_URL) {
-            const payload = {
-                timestamp: new Date().toLocaleString('ja-JP'),
-                resultType: winner.name,
-                scores: JSON.stringify(scores)
-            };
+            const data = { timestamp: new Date().toLocaleString(), resultType: winnerName, scores: JSON.stringify(scores) };
             const params = new URLSearchParams();
-            params.append('data', JSON.stringify(payload));
+            params.append('data', JSON.stringify(data));
             fetch(GAS_URL, { method: 'POST', mode: 'no-cors', body: params });
         }
     }
 
     function showScreen(id) {
-        document.querySelectorAll('.screen, #start-screen, #quiz-screen, #result-screen').forEach(s => {
-            if(s) s.style.display = 'none';
-        });
-        const target = document.getElementById(id);
-        if(target) target.style.display = 'block';
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
     }
+</script>
+
+</body>
+</html>
